@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot Vercel Dialogflow</title>
+    <style>
+        /* CSS Sederhana */
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; margin: 0; background-color: #f4f4f9; }
+        #chat-container { width: 400px; border: 1px solid #ccc; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; margin-top: 5vh; }
+        #chat-window { flex-grow: 1; padding: 10px; overflow-y: auto; }
+        .user-message { text-align: right; background-color: #dcf8c6; padding: 8px; border-radius: 10px 10px 0 10px; margin: 5px 0; max-width: 80%; margin-left: auto; }
+        .bot-message { text-align: left; background-color: #f1f0f0; padding: 8px; border-radius: 10px 10px 10px 0; margin: 5px 0; max-width: 80%; }
+        #input-area { display: flex; padding: 10px; border-top: 1px solid #ccc; }
+        #userInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        #sendBtn { padding: 10px 15px; margin-left: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-window">
+            <div class="bot-message">Selamat datang di Chatbot Sederhana!</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="userInput" placeholder="Ketik pesan Anda...">
+            <button id="sendBtn" onclick="sendMessage()">Kirim</button>
+        </div>
+    </div>
+
+    <script>
+        // Ganti dengan URL deployment backend Anda (jika backend di-deploy terpisah)
+        // Jika menggunakan Vercel Serverless Functions, URL-nya mungkin '/api/dialogflow'
+        const API_ENDPOINT = 'YOUR_BACKEND_API_URL/api/dialogflow'; 
+        
+        // Buat ID sesi unik untuk setiap kunjungan
+        const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+        
+        const chatWindow = document.getElementById('chat-window');
+        const userInput = document.getElementById('userInput');
+
+        // Tambahkan event listener untuk tombol 'Enter'
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function displayMessage(message, senderClass) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = senderClass;
+            msgDiv.textContent = message;
+            chatWindow.appendChild(msgDiv);
+            // Gulir ke bawah
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userText = userInput.value.trim();
+            if (userText === '') return;
+
+            // Tampilkan pesan pengguna
+            displayMessage(userText, 'user-message');
+            userInput.value = ''; // Kosongkan input
+            
+            // Tampilkan status 'mengetik'
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'bot-message';
+            typingIndicator.textContent = 'Bot sedang mengetik...';
+            chatWindow.appendChild(typingIndicator);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userText, sessionId: sessionId })
+                });
+
+                const data = await response.json();
+                
+                // Hapus indikator 'mengetik'
+                chatWindow.removeChild(typingIndicator);
+                
+                if (data.response) {
+                    // Tampilkan balasan dari Dialogflow
+                    displayMessage(data.response, 'bot-message');
+                } else {
+                    displayMessage('Error: Gagal mendapatkan respons dari bot.', 'bot-message');
+                }
+            } catch (error) {
+                console.error('Error saat menghubungi API:', error);
+                // Hapus indikator 'mengetik' dan tampilkan error
+                chatWindow.removeChild(typingIndicator);
+                displayMessage('Error jaringan. Coba lagi nanti.', 'bot-message');
+            }
+        }
+    </script>
+</body>
+</html>
